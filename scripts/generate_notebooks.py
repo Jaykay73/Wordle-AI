@@ -268,7 +268,7 @@ Fine-tuning a lightweight pretrained open-weights causal language model (`SmolLM
     make_cell("code", path_resolver_code + """import torch
 
 if os.path.exists("/kaggle/input"):
-    !pip install -q transformers peft accelerate datasets
+    !pip install -q -U torchao transformers peft accelerate datasets
 
 from src.wordle.dictionary import WordleDictionary
 from src.training.train_tiny_lm import train_tiny_lm

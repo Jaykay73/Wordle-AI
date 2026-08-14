@@ -9,6 +9,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sys
+import os
+
+# Workaround for Kaggle environments with preinstalled outdated torchao (< 0.16.0)
+try:
+    import torchao
+    ver = getattr(torchao, "__version__", "0.0.0")
+    parts = [int(p) for p in ver.split(".")[:2] if p.isdigit()]
+    if parts and parts < [0, 16]:
+        sys.modules["torchao"] = None
+except Exception:
+    pass
+
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import LoraConfig, get_peft_model, TaskType
