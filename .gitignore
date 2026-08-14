@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest & IDEs
+.pytest_cache/
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Model Checkpoints & Adapters (exclude large binary weights from git)
+models/*/*.pt
+models/*/*.bin
+models/*/*.safetensors
+models/*/*.onnx
+!models/README.md
+
+# Log files
+*.log
