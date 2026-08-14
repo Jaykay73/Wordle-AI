@@ -1,23 +1,23 @@
-# 🧩 Wordle AI: Neuro-Symbolic & Transformer Solver Lab
+# Wordle AI: Neuro-Symbolic & Transformer Solver Lab
 
-Welcome to **Wordle AI** — a complete, research-grade machine learning project exploring how neural language models, classical information theory, and symbolic constraint engines play the popular game of Wordle! 🟩🟨⬛
+Welcome to **Wordle AI** — a complete, research-grade machine learning project exploring how neural language models, classical information theory, and symbolic constraint engines play the popular game of Wordle!
 
-Whether you're curious about **building Transformers from scratch in PyTorch**, **fine-tuning open-weights LMs with PEFT/LoRA**, or **designing neuro-symbolic systems**, this portfolio project is built to be modular, reproducible, lightweight, and fun! 🚀
+Whether you're curious about **building Transformers from scratch in PyTorch**, **fine-tuning open-weights LMs with PEFT/LoRA**, or **designing neuro-symbolic systems**, this portfolio project is built to be modular, reproducible, lightweight, and fun!
 
 ---
 
-## 🎯 Core Research Question
+## Core Research Question
 
 > **How well can increasingly sophisticated neural and neuro-symbolic approaches learn to play Wordle compared with a classical information-theoretic solver?**
 
-Wordle is a fascinating benchmark for artificial intelligence because it combines:
+Wordle is a benchmark for artificial intelligence because it combines:
 1. **Deductive symbolic reasoning** (hard constraints on eliminated, present, and exact character positions).
 2. **Information theory** (maximizing expected entropy gain per guess).
 3. **Linguistic prior modeling** (learning letter patterns and word probabilities).
 
 ---
 
-## 🔬 Investigated Models
+## Investigated Models
 
 We build and evaluate four distinct solver families under identical experimental conditions:
 
@@ -32,7 +32,7 @@ We build and evaluate four distinct solver families under identical experimental
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
@@ -44,16 +44,17 @@ graph TD
     C -->|Neuro-Symbolic| F[Hybrid Solver]
     
     F -->|Hard Constraint Filter| G[Valid Candidates]
-    G -->|Scored by P(word | state)| H[Transformer Prior Logits]
-    G -->|Scored by H(F | g)| I[Entropy Gain Calculation]
+    G -->|"Scored by P(word given state)"| H[Transformer Prior Logits]
+    G -->|"Scored by H(F given g)"| I[Entropy Gain Calculation]
     
-    H & I -->|Weighted Scoring| J[Final Score Calculation]
+    H --> J[Final Score Calculation]
+    I --> J
     J -->|Optimal Guess| K[Next Word Guess]
 ```
 
 ---
 
-## 📊 Benchmark Results Summary
+## Benchmark Results Summary
 
 *All solvers evaluated on the exact same 265 held-out test secret words (unseen during training).*
 
@@ -66,18 +67,18 @@ graph TD
 | **Tiny Pretrained LM** | ~84.5% | ~4.20 | 4.0 | ~25 ms | 0.0% |
 | **Neuro-Symbolic Hybrid** | **99.6%** | **3.52** | **4.0** | ~12 ms | 0.0% |
 
-> 💡 **Key Takeaway:** While pure neural models learn good letter patterns, combining them with a symbolic constraint layer (Neuro-Symbolic Hybrid) eliminates invalid guesses and matches/surpasses classical information-theoretic solvers!
+> **Key Takeaway:** While pure neural models learn good letter patterns, combining them with a symbolic constraint layer (Neuro-Symbolic Hybrid) eliminates invalid guesses and matches/surpasses classical information-theoretic solvers!
 
 ---
 
-## 💻 Local Execution & Requirements
+## Local Execution & Requirements
 
 Designed to run locally on lightweight hardware (**8 GB RAM, Intel i5 CPU, No local GPU required**)!
 
 ### 1. Installation
 ```bash
-git clone https://github.com/your-username/wordle-ai.git
-cd wordle-ai
+git clone https://github.com/Jaykay73/Wordle-AI.git
+cd Wordle-AI
 pip install -r requirements.txt
 ```
 
@@ -109,7 +110,7 @@ python scripts/benchmark_all.py --num_games 50
 
 ---
 
-## ⚡ Kaggle GPU Training Instructions
+## Kaggle GPU Training Instructions
 
 All 9 notebooks in `notebooks/` are self-contained and pre-configured for Kaggle P100 / T4 GPUs:
 
@@ -128,10 +129,10 @@ All 9 notebooks in `notebooks/` are self-contained and pre-configured for Kaggle
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
-wordle-ai/
+Wordle-AI/
 ├── README.md                           # Main documentation & benchmark overview
 ├── app.py                              # Streamlit web application
 ├── configs/                            # YAML hyperparameter configurations
@@ -151,5 +152,5 @@ wordle-ai/
 
 ---
 
-## 📜 License
+## License
 MIT License. Free for learning, research, and portfolio use!
