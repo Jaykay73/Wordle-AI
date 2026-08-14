@@ -1,0 +1,19 @@
+# Base Wordle Configuration
+game:
+  word_length: 5
+  max_turns: 6
+  unknown_feedback_symbol: 0  # 0=gray, 1=yellow, 2=green
+
+paths:
+  raw_secrets: "data/raw/wordle_secret_words.txt"
+  raw_allowed: "data/raw/wordle_allowed_guesses.txt"
+  processed_dir: "data/processed/"
+  generated_dir: "data/generated/"
+  models_dir: "models/"
+  reports_dir: "reports/"
+
+dataset:
+  seed: 42
+  train_split: 1800
+  val_split: 250
+  test_split: 259
