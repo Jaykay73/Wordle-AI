@@ -37,15 +37,28 @@ class WordleDictionary:
     def _resolve_path(self, filepath: str) -> str:
         if os.path.exists(filepath):
             return filepath
+        
+        filename = os.path.basename(filepath)
+        
+        # Check standard relative candidates
         candidates = [
             os.path.join("..", filepath),
             os.path.join("/kaggle/working", filepath),
+            os.path.join("/kaggle/working/wordle", filepath),
             os.path.join("/kaggle/working/wordle-ai", filepath),
             os.path.join(os.path.dirname(__file__), "..", "..", filepath),
         ]
         for cand in candidates:
             if os.path.exists(cand):
                 return cand
+        
+        # Dynamic search in /kaggle/input and /kaggle/working
+        for search_base in ["/kaggle/input", "/kaggle/working"]:
+            if os.path.exists(search_base):
+                for root, dirs, files in os.walk(search_base):
+                    if filename in files:
+                        return os.path.join(root, filename)
+                        
         return filepath
 
     def _auto_download_wordlist(self, filepath: str):
