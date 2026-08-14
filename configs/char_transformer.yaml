@@ -1,0 +1,17 @@
+# Character Transformer Architecture & Hyperparameters
+model:
+  vocab_size: 36       # a-z (26) + <PAD>, <UNK>, <BOS>, <EOS>, <GUESS>, </GUESS>, <FB>, </FB>, <NEXT>, </NEXT>
+  d_model: 128
+  n_head: 4
+  num_layers: 4
+  d_ff: 256
+  dropout: 0.1
+  max_seq_len: 256
+
+training:
+  batch_size: 64
+  learning_rate: 5.0e-4
+  weight_decay: 0.01
+  epochs: 5
+  warmup_steps: 100
+  checkpoint_dir: "models/char_transformer/"

@@ -1,0 +1,21 @@
+# Tiny Pretrained LM Fine-Tuning Config (SmolLM2-135M or Pythia-140m or Qwen2.5-0.5B)
+model:
+  model_name_or_path: "HuggingFaceTB/SmolLM2-135M-Instruct"
+  fallback_model: "EleutherAI/pythia-140m"
+  max_length: 256
+
+lora:
+  r: 8
+  lora_alpha: 16
+  target_modules: ["q_proj", "v_proj"]
+  lora_dropout: 0.05
+  bias: "none"
+
+training:
+  batch_size: 16
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  num_train_epochs: 3
+  warmup_ratio: 0.05
+  fp16: true
+  output_dir: "models/tiny_lm/"
