@@ -20,6 +20,9 @@ def plot_benchmark_summary(
     output_dir: str = "reports/figures/"
 ):
     """Generates and saves all benchmark plots into output_dir."""
+    if os.path.exists("/kaggle/input") and not output_dir.startswith("/kaggle/working"):
+        output_dir = "/kaggle/working/reports/figures/"
+
     os.makedirs(output_dir, exist_ok=True)
 
     models = [m.model_name for m in metrics_list]

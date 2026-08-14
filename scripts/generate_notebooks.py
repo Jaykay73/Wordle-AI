@@ -331,7 +331,10 @@ nb9_cells = [
     make_cell("markdown", """# Notebook 09: Final Comparison & Experimental Analysis
 This flagship notebook runs the complete comparative benchmark across all solvers, generates high-res publication figures, and performs statistical bootstrap confidence interval analysis.
 """),
-    make_cell("code", path_resolver_code + """
+    make_cell("code", path_resolver_code + """import shutil
+from IPython.display import Image, display
+import glob
+
 from src.wordle.dictionary import WordleDictionary
 from src.solvers.random_solver import RandomSolver
 from src.solvers.frequency_solver import FrequencySolver
@@ -360,8 +363,21 @@ for s in solvers:
     metrics_list.append(m)
     print(f"{m.model_name:<30} | Win Rate: {m.win_rate:>5.1f}% | Avg Guesses: {m.avg_guesses:>4.2f}")
 
-plot_benchmark_summary(metrics_list, output_dir="../reports/figures/")
-print("\\nGenerated comparative benchmark plots saved to reports/figures/")
+out_dir = "/kaggle/working/reports/figures/" if os.path.exists("/kaggle/input") else "../reports/figures/"
+plot_benchmark_summary(metrics_list, output_dir=out_dir)
+print("\\nSaved benchmark visual plots to:", out_dir)
+
+# 1. Display images directly inside notebook cells
+print("\\n--- RENDERING PLOTS INLINE ---")
+for img_path in sorted(glob.glob(os.path.join(out_dir, "*.png"))):
+    print("Displaying:", os.path.basename(img_path))
+    display(Image(filename=img_path))
+
+# 2. Package as a ZIP file in /kaggle/working/ for 1-click download in Kaggle Output sidebar
+if os.path.exists("/kaggle/input"):
+    zip_out = "/kaggle/working/wordle_benchmark_figures"
+    shutil.make_archive(zip_out, 'zip', out_dir)
+    print(f"\\nCreated 1-click downloadable archive: {zip_out}.zip (available in Kaggle Output panel!)")
 """)
 ]
 
