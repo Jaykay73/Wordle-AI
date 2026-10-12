@@ -4,6 +4,7 @@ Uses a character-level Causal Transformer to rank legal candidate guesses (const
 """
 
 from typing import List, Optional
+import os
 import torch
 from ..wordle.dictionary import WordleDictionary
 from ..wordle.constraints import SymbolicConstraints
@@ -55,13 +56,20 @@ class CharacterTransformerSolver:
         if len(candidates) == 1:
             return candidates[0]
 
+        # Fast path turn 1
+        if turn == 1 and not constraints.history:
+            return "crane"
+
+        # Cap candidates to top 100 for fast CPU evaluation
+        eval_cands = candidates[:100] if len(candidates) > 100 else candidates
+
         # Construct game state sequence prompt
         history = list(constraints.history)
         state = WordleState(self.dictionary, history=history)
         prompt_seq = state.to_char_seq()
 
         # Constrained decoding: Score legal candidate words
-        scores = self.model.score_candidates(prompt_seq, candidates, self.tokenizer, self.device)
+        scores = self.model.score_candidates(prompt_seq, eval_cands, self.tokenizer, self.device)
         
         best_word = max(scores.items(), key=lambda x: x[1])[0]
         return best_word

@@ -5,6 +5,7 @@ neuro-symbolic score breakdowns, real-game human assistant mode, and research be
 """
 
 import os
+import random
 import streamlit as st
 import pandas as pd
 from PIL import Image
@@ -32,6 +33,19 @@ def load_dictionary():
 
 dict_mgr = load_dictionary()
 
+@st.cache_resource
+def get_solver(name: str):
+    if name == "Entropy Solver":
+        return EntropySolver(dict_mgr)
+    elif name == "Character Transformer":
+        return CharacterTransformerSolver(dict_mgr)
+    elif name == "Letter Frequency":
+        return FrequencySolver(dict_mgr)
+    elif name == "Random":
+        return RandomSolver(dict_mgr)
+    else:
+        return HybridSolver(dict_mgr)
+
 st.title("Wordle AI — Neuro-Symbolic & Transformer Solver Lab")
 st.markdown(
     "Explore how **Classical Information Theory**, **Character Transformers**, "
@@ -55,30 +69,41 @@ with tab1:
         key="model_select"
     )
 
-    default_secret = "crane"
-    secret_input = st.sidebar.text_input("Secret Target Word (5 letters)", value=default_secret).lower()
+    solver = get_solver(model_choice)
 
-    if len(secret_input) != 5 or not secret_input.isalpha():
-        st.sidebar.warning("Secret word must be exactly 5 alphabetic letters.")
-        secret_input = default_secret
+    # Initialize secret word in session state
+    if "target_secret" not in st.session_state:
+        st.session_state.target_secret = "apple"
 
-    # Instantiate Solver
-    if model_choice == "Entropy Solver":
-        solver = EntropySolver(dict_mgr)
-    elif model_choice == "Character Transformer":
-        solver = CharacterTransformerSolver(dict_mgr)
-    elif model_choice == "Letter Frequency":
-        solver = FrequencySolver(dict_mgr)
-    elif model_choice == "Random":
-        solver = RandomSolver(dict_mgr)
+    # Random secret button
+    if st.sidebar.button("🎲 Random Secret Word"):
+        st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+        st.session_state.reset_requested = True
+
+    secret_input = st.sidebar.text_input(
+        "Secret Target Word (5 letters)",
+        value=st.session_state.target_secret,
+        key="secret_input_box"
+    ).lower().strip()
+
+    if len(secret_input) == 5 and secret_input.isalpha():
+        if secret_input != st.session_state.target_secret:
+            st.session_state.target_secret = secret_input
+            st.session_state.reset_requested = True
     else:
-        solver = HybridSolver(dict_mgr)
+        st.sidebar.warning("Secret word must be exactly 5 alphabetic letters.")
+        secret_input = st.session_state.target_secret
 
-    # Initialize Session State
-    if "game" not in st.session_state or st.sidebar.button("Start New Game", key="btn_new_game"):
-        st.session_state.game = WordleGame(secret_word=secret_input, dictionary=dict_mgr)
+    # Check if a game reset is needed
+    if (
+        "game" not in st.session_state
+        or st.session_state.get("reset_requested", False)
+        or st.sidebar.button("🎮 Start New Game", key="btn_start_new")
+    ):
+        st.session_state.game = WordleGame(secret_word=st.session_state.target_secret, dictionary=dict_mgr)
         st.session_state.constraints = SymbolicConstraints()
         st.session_state.history_cands = [len(dict_mgr.secret_words)]
+        st.session_state.reset_requested = False
 
     game = st.session_state.game
     constraints = st.session_state.constraints
@@ -89,28 +114,36 @@ with tab1:
         st.subheader("Wordle Game Board")
 
         # Action buttons
-        btn_col1, btn_col2 = st.columns([1, 1])
-        with btn_col1:
-            if game.status == GameStatus.IN_PROGRESS:
-                if st.button("Play Next Turn", type="primary", use_container_width=True):
-                    turn = game.turns_used + 1
-                    guess = solver.choose_guess(constraints, turn=turn)
-                    fb = game.make_guess(guess)
-                    constraints.add_feedback(guess, fb)
-                    rem = len(constraints.filter_candidates(dict_mgr.secret_words))
-                    st.session_state.history_cands.append(rem)
-                    st.rerun()
-
-        with btn_col2:
-            if game.status == GameStatus.IN_PROGRESS:
-                if st.button("Auto-Solve Game", use_container_width=True):
-                    while game.status == GameStatus.IN_PROGRESS:
+        btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 1])
+        
+        if game.status == GameStatus.IN_PROGRESS:
+            with btn_col1:
+                if st.button("🤖 Play Next Turn", type="primary", use_container_width=True):
+                    with st.spinner("Calculating optimal guess..."):
                         turn = game.turns_used + 1
                         guess = solver.choose_guess(constraints, turn=turn)
                         fb = game.make_guess(guess)
                         constraints.add_feedback(guess, fb)
                         rem = len(constraints.filter_candidates(dict_mgr.secret_words))
                         st.session_state.history_cands.append(rem)
+                    st.rerun()
+
+            with btn_col2:
+                if st.button("⚡ Auto-Solve Game", use_container_width=True):
+                    with st.spinner("AI is solving the game..."):
+                        while game.status == GameStatus.IN_PROGRESS and game.turns_used < 6:
+                            turn = game.turns_used + 1
+                            guess = solver.choose_guess(constraints, turn=turn)
+                            fb = game.make_guess(guess)
+                            constraints.add_feedback(guess, fb)
+                            rem = len(constraints.filter_candidates(dict_mgr.secret_words))
+                            st.session_state.history_cands.append(rem)
+                    st.rerun()
+        else:
+            with btn_col1:
+                if st.button("🔄 Play Again", type="primary", use_container_width=True):
+                    st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+                    st.session_state.reset_requested = True
                     st.rerun()
 
         # Display Board Rows
@@ -138,9 +171,9 @@ with tab1:
 
         if game.status == GameStatus.WON:
             st.balloons()
-            st.success(f"SOLVED! {model_choice} solved it in {game.turns_used} turns!")
+            st.success(f"🎉 SOLVED! {model_choice} identified '{st.session_state.target_secret.upper()}' in {game.turns_used} turns!")
         elif game.status == GameStatus.LOST:
-            st.error(f"Game Over! The secret word was: {secret_input.upper()}")
+            st.error(f"❌ Game Over! The secret word was: {st.session_state.target_secret.upper()}")
 
     with col2:
         st.subheader("Model Explainability & Candidate Space")
@@ -229,7 +262,7 @@ with tab2:
 
     if filtered_words:
         st.markdown("##### Top AI Recommendations for Your Next Guess:")
-        asst_hybrid = HybridSolver(dict_mgr)
+        asst_hybrid = get_solver("Neuro-Symbolic Hybrid")
         recs = asst_hybrid.get_candidate_rankings(asst_constraints, top_k=10)
         if recs:
             df_recs = pd.DataFrame(recs)

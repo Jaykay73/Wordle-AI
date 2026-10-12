@@ -56,13 +56,21 @@ class HybridSolver:
         if turn == 1 and not constraints.history:
             return "crane"
 
-        # Step 2: Compute Neural Log Likelihood Prior
+        # Step 2: Select evaluation pool (pruned by frequency if large for fast CPU inference)
+        eval_cands = candidates
+        if len(eval_cands) > 100:
+            g_freq, p_freq = self.freq_solver.compute_frequencies(eval_cands)
+            scored = [(w, self.freq_solver.score_word(w, g_freq, p_freq)) for w in eval_cands]
+            scored.sort(key=lambda x: x[1], reverse=True)
+            eval_cands = [w for w, _ in scored[:100]]
+
+        # Step 3: Compute Neural Log Likelihood Prior
         history = list(constraints.history)
         state = WordleState(self.dictionary, history=history)
         prompt_seq = state.to_char_seq()
         
         neural_scores = self.neural_solver.model.score_candidates(
-            prompt_seq, candidates, self.neural_solver.tokenizer, self.neural_solver.device
+            prompt_seq, eval_cands, self.neural_solver.tokenizer, self.neural_solver.device
         )
 
         # Normalize neural scores to [0, 1] range
@@ -72,28 +80,28 @@ class HybridSolver:
             w: (s - min_n) / (max_n - min_n + 1e-8) for w, s in neural_scores.items()
         }
 
-        # Step 3: Compute Information-Theoretic Entropy Scores
-        entropy_scores = self.entropy_solver.get_all_entropy_scores(constraints, candidates=candidates)
+        # Step 4: Compute Information-Theoretic Entropy Scores
+        entropy_scores = self.entropy_solver.get_all_entropy_scores(constraints, candidates=eval_cands)
         max_e = max(entropy_scores.values()) if entropy_scores else 1.0
         norm_entropy = {
             w: s / (max_e + 1e-8) for w, s in entropy_scores.items()
         }
 
-        # Step 4: Compute Letter Frequency Scores
-        g_freq, p_freq = self.freq_solver.compute_frequencies(candidates)
+        # Step 5: Compute Letter Frequency Scores
+        g_freq, p_freq = self.freq_solver.compute_frequencies(eval_cands)
         raw_freq = {
-            w: self.freq_solver.score_word(w, g_freq, p_freq) for w in candidates
+            w: self.freq_solver.score_word(w, g_freq, p_freq) for w in eval_cands
         }
         max_f = max(raw_freq.values()) if raw_freq else 1.0
         norm_freq = {
             w: s / (max_f + 1e-8) for w, s in raw_freq.items()
         }
 
-        # Step 5: Score Breakdown & Hybrid Weighted Ranking
-        best_word = candidates[0]
+        # Step 6: Score Breakdown & Hybrid Weighted Ranking
+        best_word = eval_cands[0]
         best_total_score = -float("inf")
 
-        for word in candidates:
+        for word in eval_cands:
             n_score = norm_neural.get(word, 0.0)
             e_score = norm_entropy.get(word, 0.0)
             f_score = norm_freq.get(word, 0.0)
@@ -120,27 +128,45 @@ class HybridSolver:
         if not candidates:
             return []
 
+        # Fast path turn 1 or single candidate
+        if len(candidates) == 1:
+            return [{
+                "word": candidates[0].upper(),
+                "transformer_score": 1.0,
+                "entropy_gain": 0.0,
+                "freq_score": 1.0,
+                "final_score": 1.0
+            }]
+
+        # Cap evaluation pool to 50 for instantaneous UI rendering
+        eval_cands = candidates
+        if len(eval_cands) > 50:
+            g_freq, p_freq = self.freq_solver.compute_frequencies(eval_cands)
+            scored = [(w, self.freq_solver.score_word(w, g_freq, p_freq)) for w in eval_cands]
+            scored.sort(key=lambda x: x[1], reverse=True)
+            eval_cands = [w for w, _ in scored[:50]]
+
         state = WordleState(self.dictionary, history=list(constraints.history))
         prompt_seq = state.to_char_seq()
 
         neural_scores = self.neural_solver.model.score_candidates(
-            prompt_seq, candidates, self.neural_solver.tokenizer, self.neural_solver.device
+            prompt_seq, eval_cands, self.neural_solver.tokenizer, self.neural_solver.device
         )
         min_n = min(neural_scores.values()) if neural_scores else 0.0
         max_n = max(neural_scores.values()) if neural_scores else 1.0
         norm_neural = {w: (s - min_n) / (max_n - min_n + 1e-8) for w, s in neural_scores.items()}
 
-        entropy_scores = self.entropy_solver.get_all_entropy_scores(constraints, candidates=candidates)
+        entropy_scores = self.entropy_solver.get_all_entropy_scores(constraints, candidates=eval_cands)
         max_e = max(entropy_scores.values()) if entropy_scores else 1.0
         norm_entropy = {w: s / (max_e + 1e-8) for w, s in entropy_scores.items()}
 
-        g_freq, p_freq = self.freq_solver.compute_frequencies(candidates)
-        raw_freq = {w: self.freq_solver.score_word(w, g_freq, p_freq) for w in candidates}
+        g_freq, p_freq = self.freq_solver.compute_frequencies(eval_cands)
+        raw_freq = {w: self.freq_solver.score_word(w, g_freq, p_freq) for w in eval_cands}
         max_f = max(raw_freq.values()) if raw_freq else 1.0
         norm_freq = {w: s / (max_f + 1e-8) for w, s in raw_freq.items()}
 
         rankings = []
-        for word in candidates:
+        for word in eval_cands:
             n_score = norm_neural.get(word, 0.0)
             e_score = norm_entropy.get(word, 0.0)
             f_score = norm_freq.get(word, 0.0)
