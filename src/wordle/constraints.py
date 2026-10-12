@@ -26,6 +26,9 @@ class SymbolicConstraints:
         """
         candidate = candidate.lower()
         for guess, feedback in self.history:
+            # An already played non-winning guess can never be the solution
+            if candidate == guess and not all(f == FeedbackTile.GREEN for f in feedback):
+                return False
             if get_feedback(candidate, guess) != feedback:
                 return False
         return True

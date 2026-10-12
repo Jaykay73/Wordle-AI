@@ -72,27 +72,23 @@ with tab1:
     solver = get_solver(model_choice)
 
     # Initialize secret word in session state
-    if "target_secret" not in st.session_state:
-        st.session_state.target_secret = "apple"
+    # Initialize secret input widget state
+    if "secret_input_box" not in st.session_state:
+        st.session_state.secret_input_box = "apple"
 
     # Random secret button
     if st.sidebar.button("🎲 Random Secret Word"):
-        st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+        st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
         st.session_state.reset_requested = True
 
     secret_input = st.sidebar.text_input(
         "Secret Target Word (5 letters)",
-        value=st.session_state.target_secret,
         key="secret_input_box"
     ).lower().strip()
 
-    if len(secret_input) == 5 and secret_input.isalpha():
-        if secret_input != st.session_state.target_secret:
-            st.session_state.target_secret = secret_input
-            st.session_state.reset_requested = True
-    else:
+    if len(secret_input) != 5 or not secret_input.isalpha():
         st.sidebar.warning("Secret word must be exactly 5 alphabetic letters.")
-        secret_input = st.session_state.target_secret
+        secret_input = "apple"
 
     if secret_input in dict_mgr.all_valid_guesses and secret_input not in dict_mgr.secret_words:
         st.sidebar.info(
@@ -103,12 +99,14 @@ with tab1:
     # Check if a game reset is needed
     if (
         "game" not in st.session_state
+        or st.session_state.get("active_secret") != secret_input
         or st.session_state.get("reset_requested", False)
         or st.sidebar.button("🎮 Start New Game", key="btn_start_new")
     ):
-        st.session_state.game = WordleGame(secret_word=st.session_state.target_secret, dictionary=dict_mgr)
+        st.session_state.game = WordleGame(secret_word=secret_input, dictionary=dict_mgr)
         st.session_state.constraints = SymbolicConstraints()
         st.session_state.history_cands = [len(dict_mgr.secret_words)]
+        st.session_state.active_secret = secret_input
         st.session_state.reset_requested = False
 
     game = st.session_state.game
@@ -152,7 +150,7 @@ with tab1:
         else:
             with btn_col1:
                 if st.button("🔄 Play Again", type="primary", use_container_width=True):
-                    st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+                    st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
                     st.session_state.reset_requested = True
                     st.rerun()
 
@@ -183,9 +181,9 @@ with tab1:
         st.write("")
         if game.status == GameStatus.WON:
             st.balloons()
-            st.success(f"🎉 SOLVED! {model_choice} identified '{st.session_state.target_secret.upper()}' in {game.turns_used} turns!")
+            st.success(f"🎉 SOLVED! {model_choice} identified '{secret_input.upper()}' in {game.turns_used} turns!")
         elif game.status == GameStatus.LOST:
-            st.error(f"❌ Game Over! The secret word was: {st.session_state.target_secret.upper()}")
+            st.error(f"❌ Game Over! The secret word was: {secret_input.upper()}")
 
     with col2:
         st.subheader("Model Explainability & Candidate Space")
