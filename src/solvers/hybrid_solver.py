@@ -44,10 +44,22 @@ class HybridSolver:
         # Step 1: Symbolic Constraint Filtering (Hard Layer)
         if self.enforce_constraints:
             candidates = constraints.filter_candidates(self.dictionary.secret_words)
+            # Fallback: if target secret is not in secret_words (e.g. valid guess like ADIEU), filter all valid guesses
             if not candidates:
-                candidates = self.dictionary.all_valid_guesses
+                candidates = constraints.filter_candidates(self.dictionary.all_valid_guesses)
         else:
-            candidates = self.dictionary.all_valid_guesses
+            candidates = constraints.filter_candidates(self.dictionary.all_valid_guesses)
+
+        # Exclude already played guesses from candidate pool
+        played_words = {guess.lower() for guess, _ in constraints.history}
+        unplayed = [c for c in candidates if c not in played_words]
+        if unplayed:
+            candidates = unplayed
+
+        if not candidates:
+            # Absolute safety fallback: pick unplayed word from all valid guesses
+            unplayed_all = [w for w in self.dictionary.all_valid_guesses if w not in played_words]
+            return unplayed_all[0] if unplayed_all else self.dictionary.all_valid_guesses[0]
 
         if len(candidates) == 1:
             return candidates[0]
@@ -126,7 +138,14 @@ class HybridSolver:
         """Returns top_k candidate scoring breakdowns for interpretability & visualization."""
         candidates = constraints.filter_candidates(self.dictionary.secret_words)
         if not candidates:
+            candidates = constraints.filter_candidates(self.dictionary.all_valid_guesses)
+        if not candidates:
             return []
+
+        played_words = {guess.lower() for guess, _ in constraints.history}
+        unplayed = [c for c in candidates if c not in played_words]
+        if unplayed:
+            candidates = unplayed
 
         # Fast path turn 1 or single candidate
         if len(candidates) == 1:

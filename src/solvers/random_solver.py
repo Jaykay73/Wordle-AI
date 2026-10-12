@@ -23,5 +23,14 @@ class RandomSolver:
     ) -> str:
         candidates = constraints.filter_candidates(self.dictionary.secret_words)
         if not candidates:
-            candidates = self.dictionary.all_valid_guesses
-        return self.rng.choice(candidates)
+            candidates = constraints.filter_candidates(self.dictionary.all_valid_guesses)
+
+        played_words = {guess.lower() for guess, _ in constraints.history}
+        unplayed = [c for c in candidates if c not in played_words]
+        if unplayed:
+            candidates = unplayed
+
+        if not candidates:
+            candidates = [w for w in self.dictionary.all_valid_guesses if w not in played_words]
+
+        return self.rng.choice(candidates or self.dictionary.all_valid_guesses)

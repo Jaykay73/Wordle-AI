@@ -94,6 +94,12 @@ with tab1:
         st.sidebar.warning("Secret word must be exactly 5 alphabetic letters.")
         secret_input = st.session_state.target_secret
 
+    if secret_input in dict_mgr.all_valid_guesses and secret_input not in dict_mgr.secret_words:
+        st.sidebar.info(
+            f"ℹ️ '{secret_input.upper()}' is an allowed Wordle guess, but not in the official 2,315 secret solution list. "
+            "The AI solver will automatically search the full 12,972-word dictionary!"
+        )
+
     # Check if a game reset is needed
     if (
         "game" not in st.session_state
@@ -124,8 +130,10 @@ with tab1:
                         guess = solver.choose_guess(constraints, turn=turn)
                         fb = game.make_guess(guess)
                         constraints.add_feedback(guess, fb)
-                        rem = len(constraints.filter_candidates(dict_mgr.secret_words))
-                        st.session_state.history_cands.append(rem)
+                        rem_cands = constraints.filter_candidates(dict_mgr.secret_words)
+                        if not rem_cands:
+                            rem_cands = constraints.filter_candidates(dict_mgr.all_valid_guesses)
+                        st.session_state.history_cands.append(len(rem_cands))
                     st.rerun()
 
             with btn_col2:
@@ -136,8 +144,10 @@ with tab1:
                             guess = solver.choose_guess(constraints, turn=turn)
                             fb = game.make_guess(guess)
                             constraints.add_feedback(guess, fb)
-                            rem = len(constraints.filter_candidates(dict_mgr.secret_words))
-                            st.session_state.history_cands.append(rem)
+                            rem_cands = constraints.filter_candidates(dict_mgr.secret_words)
+                            if not rem_cands:
+                                rem_cands = constraints.filter_candidates(dict_mgr.all_valid_guesses)
+                            st.session_state.history_cands.append(len(rem_cands))
                     st.rerun()
         else:
             with btn_col1:
@@ -146,29 +156,31 @@ with tab1:
                     st.session_state.reset_requested = True
                     st.rerun()
 
-        # Display Board Rows
+        # Display Board Rows with clean centered flexbox HTML
+        st.write("")
         for turn_idx in range(6):
-            cols = st.columns(5)
             if turn_idx < len(game.guesses):
                 guess_word = game.guesses[turn_idx].upper()
                 fb = game.feedbacks[turn_idx]
-                for letter_idx in range(5):
-                    char = guess_word[letter_idx]
-                    tile_type = fb[letter_idx]
-                    bg_color = "#6aaa64" if tile_type == 2 else ("#c9b458" if tile_type == 1 else "#787c7e")
-                    cols[letter_idx].markdown(
-                        f"<div style='text-align:center; background-color:{bg_color}; color:white; "
-                        f"font-size:26px; font-weight:bold; padding:12px 0; border-radius:6px; margin:2px;'>{char}</div>",
-                        unsafe_allow_html=True,
+                tiles = []
+                for i in range(5):
+                    color = "#6aaa64" if fb[i] == 2 else ("#c9b458" if fb[i] == 1 else "#787c7e")
+                    tiles.append(
+                        f"<div style='background-color:{color}; width:52px; height:52px; line-height:52px; "
+                        f"text-align:center; color:white; font-size:26px; font-weight:bold; border-radius:6px; "
+                        f"margin:3px; display:inline-block;'>{guess_word[i]}</div>"
                     )
+                st.markdown(f"<div style='display:flex; justify-content:center;'>{''.join(tiles)}</div>", unsafe_allow_html=True)
             else:
-                for letter_idx in range(5):
-                    cols[letter_idx].markdown(
-                        "<div style='text-align:center; background-color:#3a3a3c; color:white; "
-                        "font-size:26px; font-weight:bold; padding:12px 0; border-radius:6px; margin:2px;'> </div>",
-                        unsafe_allow_html=True,
-                    )
+                empty_tiles = [
+                    "<div style='background-color:#3a3a3c; width:52px; height:52px; line-height:52px; "
+                    "text-align:center; color:white; font-size:26px; font-weight:bold; border-radius:6px; "
+                    "margin:3px; display:inline-block;'> </div>"
+                    for _ in range(5)
+                ]
+                st.markdown(f"<div style='display:flex; justify-content:center;'>{''.join(empty_tiles)}</div>", unsafe_allow_html=True)
 
+        st.write("")
         if game.status == GameStatus.WON:
             st.balloons()
             st.success(f"🎉 SOLVED! {model_choice} identified '{st.session_state.target_secret.upper()}' in {game.turns_used} turns!")
@@ -179,6 +191,8 @@ with tab1:
         st.subheader("Model Explainability & Candidate Space")
 
         rem_candidates = constraints.filter_candidates(dict_mgr.secret_words)
+        if not rem_candidates:
+            rem_candidates = constraints.filter_candidates(dict_mgr.all_valid_guesses)
         m_col1, m_col2 = st.columns(2)
         m_col1.metric("Candidates Remaining", len(rem_candidates))
         m_col2.metric("Turns Used", f"{game.turns_used} / 6")
