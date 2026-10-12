@@ -71,25 +71,25 @@ with tab1:
 
     solver = get_solver(model_choice)
 
-    # Initialize secret word in session state
-    # Initialize secret input widget state
-    if "secret_input_box" not in st.session_state:
-        st.session_state.secret_input_box = "apple"
-
-    if st.session_state.get("pending_random_secret", False):
-        st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
-        st.session_state.pending_random_secret = False
-        st.session_state.reset_requested = True
+    # Initialize secret word and dynamic widget key in session state
+    if "target_secret" not in st.session_state:
+        st.session_state.target_secret = "apple"
+    if "secret_key_counter" not in st.session_state:
+        st.session_state.secret_key_counter = 0
 
     # Random secret button
     if st.sidebar.button("🎲 Random Secret Word"):
-        st.session_state.pending_random_secret = True
+        st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+        st.session_state.secret_key_counter = st.session_state.get("secret_key_counter", 0) + 1
+        st.session_state.reset_requested = True
         st.rerun()
 
     secret_input = st.sidebar.text_input(
         "Secret Target Word (5 letters)",
-        key="secret_input_box"
+        value=st.session_state.target_secret,
+        key=f"secret_input_key_{st.session_state.secret_key_counter}"
     ).lower().strip()
+    st.session_state.target_secret = secret_input
 
     if len(secret_input) != 5 or not secret_input.isalpha():
         st.sidebar.warning("Secret word must be exactly 5 alphabetic letters.")
@@ -155,7 +155,9 @@ with tab1:
         else:
             with btn_col1:
                 if st.button("🔄 Play Again", type="primary", use_container_width=True):
-                    st.session_state.pending_random_secret = True
+                    st.session_state.target_secret = random.choice(dict_mgr.test_secrets[:100])
+                    st.session_state.secret_key_counter = st.session_state.get("secret_key_counter", 0) + 1
+                    st.session_state.reset_requested = True
                     st.rerun()
 
         # Display Board Rows with clean centered flexbox HTML
