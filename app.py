@@ -76,10 +76,15 @@ with tab1:
     if "secret_input_box" not in st.session_state:
         st.session_state.secret_input_box = "apple"
 
+    if st.session_state.get("pending_random_secret", False):
+        st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
+        st.session_state.pending_random_secret = False
+        st.session_state.reset_requested = True
+
     # Random secret button
     if st.sidebar.button("🎲 Random Secret Word"):
-        st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
-        st.session_state.reset_requested = True
+        st.session_state.pending_random_secret = True
+        st.rerun()
 
     secret_input = st.sidebar.text_input(
         "Secret Target Word (5 letters)",
@@ -150,8 +155,7 @@ with tab1:
         else:
             with btn_col1:
                 if st.button("🔄 Play Again", type="primary", use_container_width=True):
-                    st.session_state.secret_input_box = random.choice(dict_mgr.test_secrets[:100])
-                    st.session_state.reset_requested = True
+                    st.session_state.pending_random_secret = True
                     st.rerun()
 
         # Display Board Rows with clean centered flexbox HTML
